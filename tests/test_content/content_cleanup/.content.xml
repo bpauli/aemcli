@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jcr:root xmlns:jcr="http://www.jcp.org/jcr/1.0" xmlns:cq="http://www.day.com/jcr/cq/1.0"
+    jcr:primaryType="cq:Page"
+    jcr:uuid="12345678-1234-1234-1234-123456789abc"
+    jcr:lastModified="{Date}2023-01-01T10:00:00.000Z"
+    jcr:lastModifiedBy="admin"
+    cq:lastModified="{Date}2023-01-01T10:00:00.000Z"
+    cq:lastModifiedBy="admin"
+    cq:lastReplicated="{Date}2023-01-01T09:00:00.000Z"
+    cq:lastReplicatedBy="replication-service"
+    cq:lastReplicationAction="Activate"
+    cq:isDelivered="{Boolean}true"
+    jcr:isCheckedOut="{Boolean}false"
+    sling:resourceType="cq/Page"
+    jcr:title="Test Page">
+</jcr:root> 

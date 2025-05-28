@@ -1,0 +1,15 @@
+# Core dependencies
+click>=8.0
+
+# Development dependencies
+pytest>=7.0
+pytest-cov>=4.0
+black>=23.0
+flake8>=6.0
+mypy>=1.0
+safety>=2.0
+bandit>=1.7
+pre-commit>=3.0
+
+colorama>=0.4.6
+rich>=13.0

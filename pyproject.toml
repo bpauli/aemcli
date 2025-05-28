@@ -1,0 +1,13 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "aemcli"
+version = "0.1.0"
+dependencies = [
+    "click>=8.0"
+]
+
+[project.scripts]
+aemcli = "aemcli.cli:main"

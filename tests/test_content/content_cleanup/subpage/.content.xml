@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jcr:root xmlns:jcr="http://www.jcp.org/jcr/1.0" xmlns:cq="http://www.day.com/jcr/cq/1.0"
+    jcr:primaryType="cq:PageContent"
+    jcr:uuid="87654321-4321-4321-4321-cba987654321"
+    cq:lastReplicated_publish="{Date}2023-01-02T08:00:00.000Z"
+    cq:lastReplicatedBy_publish="publish-agent"
+    cq:lastReplicationAction_publish="Activate"
+    cq:customProperty="should-remain"
+    sling:resourceType="foundation/components/page"
+    jcr:title="Sub Page">
+</jcr:root> 
