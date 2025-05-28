@@ -1,5 +1,8 @@
 # AEM CLI
 
+[![Tests](https://github.com/bpauli/aemcli/workflows/Tests/badge.svg)](https://github.com/bpauli/aemcli/actions/workflows/test.yml)
+[![CI](https://github.com/bpauli/aemcli/workflows/CI/badge.svg)](https://github.com/bpauli/aemcli/actions/workflows/ci.yml)
+
 A command-line tool for Adobe Experience Manager (AEM) content management and cleanup operations.
 
 ## Overview
@@ -195,13 +198,6 @@ This project uses GitHub Actions for continuous integration and deployment. Two 
 - **Coverage reporting**: Automatic upload to Codecov (optional)
 - **Security checks**: Automated vulnerability scanning
 - **Multi-Python support**: Ensures compatibility across Python versions
-
-### Status Badges
-Add these badges to your repository to show build status:
-```markdown
-![Tests](https://github.com/yourusername/aem-cli/workflows/Tests/badge.svg)
-![CI](https://github.com/yourusername/aem-cli/workflows/CI/badge.svg)
-```
 
 ## Dependencies
 
