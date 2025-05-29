@@ -9,7 +9,7 @@ from aemcli.commands.repo import (
     PackageBuilder,
     validate_jcr_root,
     find_or_create_jcr_root,
-    VERSION
+    VERSION,
 )
 import pytest
 
@@ -43,15 +43,15 @@ class TestRepoCommand:
         result = self.runner.invoke(repo, ["checkout", "--help"])
         assert result.exit_code == 0
         assert "Initially check out JCR_PATH" in result.output
-        
+
         result = self.runner.invoke(repo, ["put", "--help"])
         assert result.exit_code == 0
         assert "Upload local file system content" in result.output
-        
+
         result = self.runner.invoke(repo, ["get", "--help"])
         assert result.exit_code == 0
         assert "Download server content" in result.output
-        
+
         result = self.runner.invoke(repo, ["status", "--help"])
         assert result.exit_code == 0
         assert "List status of files" in result.output
@@ -80,15 +80,17 @@ class TestRepoConfig:
         """Test loading configuration from .repo file."""
         with tempfile.TemporaryDirectory() as temp_dir:
             config_file = Path(temp_dir) / ".repo"
-            config_file.write_text("""
+            config_file.write_text(
+                """
 # Test config file
 server=http://test-server:8080
 credentials=testuser:testpass
-""")
-            
+"""
+            )
+
             config = RepoConfig()
             result = config.load_config(temp_dir)
-            
+
             # Use resolve() to handle symlinks consistently
             assert result.resolve() == config_file.resolve()
             assert config.server == "http://test-server:8080"
@@ -99,7 +101,7 @@ credentials=testuser:testpass
         with tempfile.TemporaryDirectory() as temp_dir:
             config = RepoConfig()
             result = config.load_config(temp_dir)
-            
+
             assert result is None
             # Should keep default values
             assert config.server == "http://localhost:4502"
@@ -112,56 +114,68 @@ class TestPackageBuilder:
     def test_filesystem_to_jcr(self):
         """Test filesystem to JCR path conversion."""
         builder = PackageBuilder()
-        
+
         # Test basic path conversion
         assert builder.filesystem_to_jcr("/apps/project") == "/apps/project"
-        
+
         # Test .content.xml removal
-        assert builder.filesystem_to_jcr("/apps/project/.content.xml") == "/apps/project"
-        
+        assert (
+            builder.filesystem_to_jcr("/apps/project/.content.xml") == "/apps/project"
+        )
+
         # Test .xml removal
-        assert builder.filesystem_to_jcr("/apps/project/component.xml") == "/apps/project/component"
-        
+        assert (
+            builder.filesystem_to_jcr("/apps/project/component.xml")
+            == "/apps/project/component"
+        )
+
         # Test namespace conversion
         assert builder.filesystem_to_jcr("/apps/_jcr_content") == "/apps/jcr:content"
         assert builder.filesystem_to_jcr("/apps/_cq_dialog") == "/apps/cq:dialog"
-        assert builder.filesystem_to_jcr("/apps/_sling_resourceType") == "/apps/sling:resourceType"
+        assert (
+            builder.filesystem_to_jcr("/apps/_sling_resourceType")
+            == "/apps/sling:resourceType"
+        )
 
     def test_xml_escape(self):
         """Test XML escaping functionality."""
         builder = PackageBuilder()
-        
+
         assert builder.xml_escape("simple") == "simple"
         assert builder.xml_escape("test & value") == "test &amp; value"
         assert builder.xml_escape("test < value") == "test &lt; value"
         assert builder.xml_escape("test > value") == "test &gt; value"
-        assert builder.xml_escape('test "quoted" value') == "test &quot;quoted&quot; value"
-        assert builder.xml_escape("test 'quoted' value") == "test &apos;quoted&apos; value"
+        assert (
+            builder.xml_escape('test "quoted" value') == "test &quot;quoted&quot; value"
+        )
+        assert (
+            builder.xml_escape("test 'quoted' value") == "test &apos;quoted&apos; value"
+        )
 
     def test_get_excludes(self):
         """Test getting exclude patterns."""
         with tempfile.TemporaryDirectory() as temp_dir:
             builder = PackageBuilder()
-            
+
             # Create test ignore files
             vltignore = Path(temp_dir) / ".vltignore"
             vltignore.write_text("*.tmp\n.cache/\n")
-            
+
             repoignore = Path(temp_dir) / ".repoignore"
             repoignore.write_text("*.log\n.debug/\n")
-            
+
             excludes = builder.get_excludes(temp_dir, temp_dir)
-            
+
             # Should include default excludes
-            assert '.repo' in excludes
-            assert '.vlt' in excludes
-            assert '.DS_Store' in excludes
-            
+            assert ".repo" in excludes
+            assert ".vlt" in excludes
+            assert ".DS_Store" in excludes
+
             # Should include custom excludes from ignore files
-            assert '*.tmp' in excludes
-            assert '.cache/' in excludes
-            assert '*.log' in excludes
-            assert '.debug/' in excludes
+            assert "*.tmp" in excludes
+            assert ".cache/" in excludes
+            assert "*.log" in excludes
+            assert ".debug/" in excludes
 
 
 class TestJcrRootValidation:
@@ -173,13 +187,13 @@ class TestJcrRootValidation:
             # Create jcr_root structure
             jcr_root = Path(temp_dir) / "jcr_root"
             jcr_root.mkdir()
-            
+
             apps_dir = jcr_root / "apps" / "project"
             apps_dir.mkdir(parents=True)
-            
+
             # Test validation
             jcr_root_path, filter_path = validate_jcr_root(str(apps_dir))
-            
+
             # Use resolve() to handle symlinks consistently
             assert Path(jcr_root_path).resolve() == jcr_root.resolve()
             assert filter_path == "/apps/project"
@@ -189,7 +203,7 @@ class TestJcrRootValidation:
         with tempfile.TemporaryDirectory() as temp_dir:
             with pytest.raises(Exception) as exc_info:
                 validate_jcr_root(temp_dir)
-            
+
             assert "Not inside a vault checkout" in str(exc_info.value)
 
     def test_find_or_create_jcr_root_existing(self):
@@ -198,9 +212,9 @@ class TestJcrRootValidation:
             # Create existing jcr_root
             jcr_root = Path(temp_dir) / "jcr_root"
             jcr_root.mkdir()
-            
+
             result = find_or_create_jcr_root(temp_dir, "/apps/test")
-            
+
             # Use resolve() to handle symlinks consistently
             assert Path(result).resolve() == jcr_root.resolve()
             assert jcr_root.exists()
@@ -209,7 +223,7 @@ class TestJcrRootValidation:
         """Test creating new jcr_root."""
         with tempfile.TemporaryDirectory() as temp_dir:
             result = find_or_create_jcr_root(temp_dir, "/apps/test")
-            
+
             expected_path = Path(temp_dir) / "jcr_root"
             # Use resolve() to handle symlinks consistently
             assert Path(result).resolve() == expected_path.resolve()
@@ -263,4 +277,4 @@ class TestRepoCommandValidation:
             os.chdir(temp_dir)
             result = self.runner.invoke(repo, ["status"])
             assert result.exit_code == 2
-            assert "Not inside a vault checkout" in result.output 
+            assert "Not inside a vault checkout" in result.output

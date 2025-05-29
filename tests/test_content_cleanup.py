@@ -145,13 +145,13 @@ class TestContentCleanup:
             # Check subpage file as well
             subpage_xml = Path("test_content/subpage/.content.xml")
             subpage_content = subpage_xml.read_text()
-            
+
             # These should be removed from subpage
             assert "jcr:uuid=" not in subpage_content
             assert "cq:lastReplicated_preview=" not in subpage_content
             assert "cq:lastReplicatedBy_scene7=" not in subpage_content
             assert "cq:lastReplicationAction_preview=" not in subpage_content
-            
+
             # These should remain in subpage
             assert "cq:customProperty=" in subpage_content
             assert "sling:resourceType=" in subpage_content
