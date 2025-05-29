@@ -12,6 +12,7 @@ AEM CLI provides utilities for managing AEM content repositories, with a focus o
 ## Commands
 
 - **[content-cleanup](#content-cleanup-command)** - Clean AEM metadata properties from `.content.xml` files
+- **[asset-remove-unused](#asset-remove-unused-command)** - Find and remove unused DAM assets with reference checking
 - **[repo](#repository-content-transfer-command)** - FTP-like tool for JCR content transfer between filesystem and server
 
 ## Features
@@ -29,6 +30,22 @@ The tool removes common AEM system properties that are typically not needed in s
 - `cq:isDelivered`, `cq:lastModified`, `cq:lastModifiedBy`
 - `cq:lastReplicated*`, `cq:lastReplicatedBy*`, `cq:lastReplicationAction*`
 - `jcr:isCheckedOut`, `jcr:lastModified`, `jcr:lastModifiedBy`, `jcr:uuid`
+
+### Asset Cleanup
+- **Find unused DAM assets** with common MIME types (images, videos, documents, audio)
+- **Reference checking** - scans all `.content.xml` files for `image` and `fileReference` properties
+- **Smart thumbnail cleanup** - handles `dam:folderThumbnailPaths` references properly
+- **Confirmation prompts** - asks for confirmation before deletion with detailed summary
+- **Dry-run mode** - preview what would be deleted without making changes
+- **Comprehensive reporting** - shows used vs unused assets with reference counts
+
+#### Supported Asset Types
+The tool focuses on common MIME types that are typically managed in DAM:
+
+- **Images**: JPEG, PNG, GIF, WebP, SVG, BMP, TIFF
+- **Videos**: MP4, AVI, MOV, WMV, FLV, WebM, MKV
+- **Documents**: PDF, Word, Excel, PowerPoint
+- **Audio**: MP3, WAV, OGG, AAC, M4A
 
 ### Repository Content Transfer (repo)
 - **FTP-like tool for JCR content** with support for diffing
@@ -92,6 +109,91 @@ aemcli content-cleanup /path/to/content --default
 - `--dry-run` - Show what would be changed without modifying files
 - `--default` - Include default AEM properties in removal list
 - `--help` - Show detailed help and examples
+
+### Asset Remove Unused Command
+
+#### Basic Usage
+```bash
+# Find and remove unused DAM assets (with confirmation)
+aemcli asset-remove-unused /path/to/content/dam
+
+# Preview what would be deleted without making changes
+aemcli asset-remove-unused /path/to/content/dam --dry-run
+```
+
+#### Advanced Usage
+```bash
+# Start from specific directory
+aemcli asset-remove-unused content/dam/projects
+
+# Use current directory
+aemcli asset-remove-unused .
+```
+
+#### How It Works
+The command performs the following steps:
+
+1. **Asset Discovery**: Recursively finds all `.content.xml` files with `jcr:primaryType="dam:Asset"` and common MIME types
+2. **Reference Scanning**: Checks all `.content.xml` files in the jcr_root structure for references via:
+   - `image="asset-path"` properties
+   - `fileReference="asset-path"` properties  
+   - `dam:folderThumbnailPaths="[asset-path,...]"` properties
+3. **Smart Cleanup**: For assets only referenced in `folderThumbnailPaths`:
+   - Removes the asset path from the thumbnail array
+   - Marks asset for deletion
+4. **Confirmation**: Shows detailed summary and asks for confirmation before deletion
+5. **Deletion**: Removes entire parent folders containing unused asset `.content.xml` files
+
+#### Options
+- `--dry-run` - Preview what would be deleted without making any changes
+- `--help` - Show detailed help and examples
+
+#### Examples
+```bash
+# Preview unused assets in a project
+aemcli asset-remove-unused content/dam/myproject --dry-run
+
+# Clean up unused assets with confirmation
+aemcli asset-remove-unused content/dam/myproject
+
+# Check entire DAM folder
+aemcli asset-remove-unused content/dam
+```
+
+#### Example 4: Repository Workflow
+```bash
+# Start from scratch with a server project
+aemcli repo checkout /apps/myproject
+
+# Make local changes
+cd jcr_root/apps/myproject
+vim .content.xml
+
+# Check what changed
+aemcli repo status
+
+# Upload changes
+aemcli repo put
+
+# Later, download server changes
+aemcli repo get
+
+# Show differences
+aemcli repo diff
+```
+
+#### Example 5: Asset Cleanup Workflow
+```bash
+# Preview unused assets before deletion
+aemcli asset-remove-unused content/dam/myproject --dry-run
+
+# Review the output, then proceed with cleanup
+aemcli asset-remove-unused content/dam/myproject
+
+# Clean up entire DAM folder
+aemcli asset-remove-unused content/dam --dry-run
+aemcli asset-remove-unused content/dam
+```
 
 ### Repository Content Transfer Command
 
@@ -215,6 +317,19 @@ aemcli repo get
 aemcli repo diff
 ```
 
+#### Example 5: Asset Cleanup Workflow
+```bash
+# Preview unused assets before deletion
+aemcli asset-remove-unused content/dam/myproject --dry-run
+
+# Review the output, then proceed with cleanup
+aemcli asset-remove-unused content/dam/myproject
+
+# Clean up entire DAM folder
+aemcli asset-remove-unused content/dam --dry-run
+aemcli asset-remove-unused content/dam
+```
+
 ## Development
 
 ### Project Structure
@@ -224,9 +339,11 @@ aem-cli/
 │   ├── cli.py           # CLI entry point
 │   └── commands/        # Command modules
 │       ├── content_cleanup.py
+│       ├── asset_remove_unused.py
 │       └── repo.py
 ├── tests/               # Test suite
 │   ├── test_content_cleanup.py
+│   ├── test_asset_remove_unused.py
 │   ├── test_repo.py
 │   └── test_content/    # Test data
 ├── requirements.txt     # Dependencies
@@ -360,16 +477,4 @@ For questions, issues, or contributions, please:
 
 ## Changelog
 
-### v0.2.0
-- Added `repo` command for JCR content transfer
-- FTP-like functionality for AEM content management
-- Support for checkout, put, get, status, and diff operations
-- Configuration file support (.repo, .repoignore)
-- Package-based transfers using AEM package manager API
-
-### v0.1.0
-- Initial release
-- Content cleanup command with flexible property selection
-- Support for default AEM properties
-- Dry-run mode for safe testing
-- Comprehensive test suite
+See [CHANGELOG.md](CHANGELOG.md) for detailed version history and release notes.
