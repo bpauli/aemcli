@@ -536,12 +536,18 @@ class TestAssetRemoveUnused:
         jcr:primaryType="nt:unstructured"/>
 </jcr:root>""")
 
+            # Verify reference exists before cleanup
+            assert check_folder_thumbnail_paths("test_dir/jcr_root/content/folder/.content.xml", "/content/dam/to_clean")
+
             # Test actual cleanup with confirmation
             result = self.runner.invoke(asset_remove_unused, ["test_dir"], input='y\n')
 
             assert result.exit_code == 0
-            assert "CLEANED: /content/dam/to_clean (MIME: image/png) - removed from 1 folderThumbnailPaths" in result.output
-            assert "folderThumbnailPaths references have been cleaned up" in result.output
+            assert "THUMBNAIL ONLY: /content/dam/to_clean (MIME: image/png)" in result.output
+            assert "folderThumbnailPaths references will be cleaned up first" in result.output
+            assert "Cleaning folderThumbnailPaths references:" in result.output
+            assert "CLEANED: /content/dam/to_clean - removed from 1 folderThumbnailPaths" in result.output
+            assert "Cleaned 1 folderThumbnailPaths references" in result.output
             
             # Verify the reference was cleaned up
             assert not check_folder_thumbnail_paths("test_dir/jcr_root/content/folder/.content.xml", "/content/dam/to_clean")
@@ -551,4 +557,57 @@ class TestAssetRemoveUnused:
             assert check_folder_thumbnail_paths("test_dir/jcr_root/content/folder/.content.xml", "/content/dam/another")
             
             # Verify asset folder was deleted
-            assert not Path("test_dir/jcr_root/content/dam/to_clean").exists() 
+            assert not Path("test_dir/jcr_root/content/dam/to_clean").exists()
+
+    def test_asset_with_folder_thumbnail_paths_cancellation(self):
+        """Test that folderThumbnailPaths references are NOT cleaned up when deletion is cancelled."""
+        with self.runner.isolated_filesystem():
+            # Create test structure
+            os.makedirs("test_dir/jcr_root/content/dam/cancelled_clean")
+            os.makedirs("test_dir/jcr_root/content/folder")
+            
+            # Create a DAM asset
+            with open("test_dir/jcr_root/content/dam/cancelled_clean/.content.xml", "w") as f:
+                f.write("""<?xml version="1.0" encoding="UTF-8"?>
+<jcr:root xmlns:jcr="http://www.jcp.org/jcr/1.0" xmlns:dam="http://www.day.com/dam/1.0" xmlns:nt="http://www.jcp.org/jcr/nt/1.0"
+    jcr:primaryType="dam:Asset">
+    <jcr:content
+        jcr:primaryType="dam:AssetContent">
+        <metadata
+            dam:MIMEtype="image/png"
+            jcr:primaryType="nt:unstructured">
+        </metadata>
+    </jcr:content>
+</jcr:root>""")
+
+            # Create a folder that references the asset in folderThumbnailPaths
+            with open("test_dir/jcr_root/content/folder/.content.xml", "w") as f:
+                f.write("""<?xml version="1.0" encoding="UTF-8"?>
+<jcr:root xmlns:jcr="http://www.jcp.org/jcr/1.0" xmlns:dam="http://www.day.com/dam/1.0" xmlns:nt="http://www.jcp.org/jcr/nt/1.0"
+    jcr:primaryType="nt:file">
+    <jcr:content
+        dam:folderThumbnailPaths="[/content/dam/cancelled_clean,/content/dam/other]"
+        jcr:primaryType="nt:unstructured"/>
+</jcr:root>""")
+
+            # Verify reference exists before attempting cleanup
+            assert check_folder_thumbnail_paths("test_dir/jcr_root/content/folder/.content.xml", "/content/dam/cancelled_clean")
+
+            # Test cancellation with 'n'
+            result = self.runner.invoke(asset_remove_unused, ["test_dir"], input='n\n')
+
+            assert result.exit_code == 0
+            assert "THUMBNAIL ONLY: /content/dam/cancelled_clean (MIME: image/png)" in result.output
+            assert "folderThumbnailPaths references will be cleaned up first" in result.output
+            assert "Do you want to proceed with the deletion?" in result.output
+            assert "Deletion cancelled by user." in result.output
+            
+            # Verify that cleanup messages are NOT present since deletion was cancelled
+            assert "Cleaning folderThumbnailPaths references:" not in result.output
+            assert "CLEANED: /content/dam/cancelled_clean" not in result.output
+            
+            # Verify the reference was NOT cleaned up
+            assert check_folder_thumbnail_paths("test_dir/jcr_root/content/folder/.content.xml", "/content/dam/cancelled_clean")
+            
+            # Verify asset folder still exists
+            assert Path("test_dir/jcr_root/content/dam/cancelled_clean").exists() 

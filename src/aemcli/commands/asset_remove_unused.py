@@ -392,7 +392,7 @@ def asset_remove_unused(path, dry_run):
     # Check references for each asset
     unused_assets = []
     used_assets = []
-    cleaned_thumbnails = []
+    assets_with_thumbnail_refs = []
     
     for file_path, asset_path, mime_type in asset_files:
         references = check_asset_references(asset_path, all_content_xml_files)
@@ -401,21 +401,11 @@ def asset_remove_unused(path, dry_run):
             used_assets.append((file_path, asset_path, mime_type, references['files']))
             click.echo(f"USED: {asset_path} (MIME: {mime_type}) - {len(references['files'])} reference(s)")
         elif references['thumbnail_refs']:
-            # Asset is only used in folderThumbnailPaths - clean up those references
-            cleaned_thumbnails.append((file_path, asset_path, mime_type, references['thumbnail_refs']))
-            if not dry_run:
-                # Clean up thumbnail references
-                cleaned_count = 0
-                for thumb_file in references['thumbnail_refs']:
-                    if clean_folder_thumbnail_paths(thumb_file, asset_path):
-                        cleaned_count += 1
-                click.echo(f"CLEANED: {asset_path} (MIME: {mime_type}) - removed from {cleaned_count} folderThumbnailPaths")
-                # After cleaning, mark for deletion
-                unused_assets.append((file_path, asset_path, mime_type))
-            else:
-                click.echo(f"THUMBNAIL ONLY: {asset_path} (MIME: {mime_type}) - {len(references['thumbnail_refs'])} folderThumbnailPaths reference(s)")
-                # In dry run, still mark for deletion after cleanup
-                unused_assets.append((file_path, asset_path, mime_type))
+            # Asset is only used in folderThumbnailPaths - mark for cleanup and deletion
+            assets_with_thumbnail_refs.append((file_path, asset_path, mime_type, references['thumbnail_refs']))
+            click.echo(f"THUMBNAIL ONLY: {asset_path} (MIME: {mime_type}) - {len(references['thumbnail_refs'])} folderThumbnailPaths reference(s)")
+            # Mark for deletion (cleanup will happen after confirmation)
+            unused_assets.append((file_path, asset_path, mime_type))
         else:
             unused_assets.append((file_path, asset_path, mime_type))
             click.echo(f"UNUSED: {asset_path} (MIME: {mime_type})")
@@ -424,8 +414,8 @@ def asset_remove_unused(path, dry_run):
     click.echo(f"Summary:")
     click.echo(f"  Total assets found: {len(asset_files)}")
     click.echo(f"  Used assets: {len(used_assets)}")
-    if cleaned_thumbnails:
-        click.echo(f"  Assets with only thumbnail references: {len(cleaned_thumbnails)}")
+    if assets_with_thumbnail_refs:
+        click.echo(f"  Assets with only thumbnail references: {len(assets_with_thumbnail_refs)}")
     click.echo(f"  Unused assets: {len(unused_assets)}")
 
     # Handle deletion of unused assets
@@ -433,7 +423,7 @@ def asset_remove_unused(path, dry_run):
         click.echo("-" * 70)
         if dry_run:
             click.echo("DRY RUN - The following folders would be deleted:")
-            if cleaned_thumbnails:
+            if assets_with_thumbnail_refs:
                 click.echo("(Note: folderThumbnailPaths references will be cleaned up first)")
             
             deleted_count = 0
@@ -444,13 +434,13 @@ def asset_remove_unused(path, dry_run):
             
             click.echo("-" * 70)
             click.echo(f"Would delete {deleted_count} unused asset folders")
-            if cleaned_thumbnails:
-                click.echo(f"Would clean {len(cleaned_thumbnails)} folderThumbnailPaths references")
+            if assets_with_thumbnail_refs:
+                click.echo(f"Would clean {len(assets_with_thumbnail_refs)} folderThumbnailPaths references")
         else:
             # Show summary and ask for confirmation
             click.echo("The following unused asset folders will be PERMANENTLY DELETED:")
-            if cleaned_thumbnails:
-                click.echo("(folderThumbnailPaths references have been cleaned up)")
+            if assets_with_thumbnail_refs:
+                click.echo("(folderThumbnailPaths references will be cleaned up first)")
             click.echo()
             for file_path, asset_path, mime_type in unused_assets:
                 folder_path = file_path.parent
@@ -459,15 +449,30 @@ def asset_remove_unused(path, dry_run):
             
             click.echo()
             click.echo(f"Total: {len(unused_assets)} asset folder(s) will be deleted")
-            if cleaned_thumbnails:
-                click.echo(f"Note: Cleaned {len([item for item in cleaned_thumbnails if item[0] in [u[0] for u in unused_assets]])} folderThumbnailPaths references")
+            if assets_with_thumbnail_refs:
+                click.echo(f"Note: {len(assets_with_thumbnail_refs)} folderThumbnailPaths references will be cleaned up")
             click.echo()
             
             # Ask for confirmation
             if click.confirm("Do you want to proceed with the deletion?", default=False):
                 click.echo("-" * 70)
-                click.echo("Deleting unused asset folders:")
                 
+                # First, clean up folderThumbnailPaths references
+                if assets_with_thumbnail_refs:
+                    click.echo("Cleaning folderThumbnailPaths references:")
+                    total_cleaned = 0
+                    for file_path, asset_path, mime_type, thumb_files in assets_with_thumbnail_refs:
+                        cleaned_count = 0
+                        for thumb_file in thumb_files:
+                            if clean_folder_thumbnail_paths(thumb_file, asset_path):
+                                cleaned_count += 1
+                        click.echo(f"  CLEANED: {asset_path} - removed from {cleaned_count} folderThumbnailPaths")
+                        total_cleaned += cleaned_count
+                    click.echo(f"  Total: Cleaned {total_cleaned} folderThumbnailPaths references")
+                    click.echo("-" * 70)
+                
+                # Then delete asset folders
+                click.echo("Deleting unused asset folders:")
                 deleted_count = 0
                 for file_path, asset_path, mime_type in unused_assets:
                     click.echo(f"Processing: {asset_path}")
@@ -476,11 +481,9 @@ def asset_remove_unused(path, dry_run):
                 
                 click.echo("-" * 70)
                 click.echo(f"Deleted {deleted_count} unused asset folders")
+                if assets_with_thumbnail_refs:
+                    click.echo(f"Cleaned {len(assets_with_thumbnail_refs)} folderThumbnailPaths references")
             else:
                 click.echo("Deletion cancelled by user.")
-        if cleaned_thumbnails and not dry_run:
-            click.echo(f"\nCleaned {len(cleaned_thumbnails)} folderThumbnailPaths references")
     else:
-        if cleaned_thumbnails and not dry_run:
-            click.echo(f"\nCleaned {len(cleaned_thumbnails)} folderThumbnailPaths references")
         click.echo("\nNo unused assets found to delete.") 
