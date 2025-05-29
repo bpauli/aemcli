@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jcr:root xmlns:jcr="http://www.jcp.org/jcr/1.0" xmlns:dam="http://www.day.com/dam/1.0" xmlns:nt="http://www.jcp.org/jcr/nt/1.0" xmlns:dc="http://purl.org/dc/elements/1.1/"
+    jcr:primaryType="dam:Asset">
+    <jcr:content
+        jcr:primaryType="dam:AssetContent">
+        <metadata
+            jcr:primaryType="nt:unstructured"
+            dam:MIMEtype="image/png"
+            dam:size="{Long}12592"
+            dc:title="Test Asset 2">
+        </metadata>
+    </jcr:content>
+</jcr:root> 

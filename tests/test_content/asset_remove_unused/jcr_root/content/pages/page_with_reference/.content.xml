@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jcr:root xmlns:jcr="http://www.jcp.org/jcr/1.0" xmlns:cq="http://www.day.com/jcr/cq/1.0" xmlns:sling="http://sling.apache.org/jcr/sling/1.0"
+    jcr:primaryType="cq:Page">
+    <jcr:content
+        jcr:primaryType="cq:PageContent"
+        jcr:title="Page with Asset Reference"
+        sling:resourceType="foundation/components/page">
+        <hero
+            jcr:primaryType="nt:unstructured"
+            image="/content/dam/asset1"
+            sling:resourceType="components/hero">
+        </hero>
+        <content
+            jcr:primaryType="nt:unstructured"
+            fileReference="/content/dam/folder/asset2"
+            sling:resourceType="components/content">
+        </content>
+    </jcr:content>
+</jcr:root> 

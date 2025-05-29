@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jcr:root xmlns:jcr="http://www.jcp.org/jcr/1.0" xmlns:dam="http://www.day.com/dam/1.0" xmlns:nt="http://www.jcp.org/jcr/nt/1.0"
+    jcr:mixinTypes="[mix:referenceable]"
+    jcr:primaryType="dam:Asset">
+    <jcr:content
+        jcr:lastModified="{Date}2023-01-01T10:00:00.000Z"
+        jcr:lastModifiedBy="admin"
+        jcr:primaryType="dam:AssetContent"
+        jcr:uuid="12345678-1234-1234-1234-123456789abc">
+        <metadata
+            dam:MIMEtype="image/jpeg"
+            dam:size="{Long}245760"
+            jcr:primaryType="nt:unstructured">
+        </metadata>
+    </jcr:content>
+</jcr:root> 
