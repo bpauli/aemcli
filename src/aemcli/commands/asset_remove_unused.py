@@ -1,6 +1,6 @@
 import click
 import os
-import xml.etree.ElementTree as ET
+import defusedxml.ElementTree as ET
 import shutil
 from pathlib import Path
 
