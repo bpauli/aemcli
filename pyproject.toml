@@ -5,6 +5,8 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "aemcli"
 version = "0.1.0"
+description = "A command-line tool for Adobe Experience Manager (AEM) content management and cleanup operations"
+license = {text = "MIT"}
 dependencies = [
     "click>=8.0"
 ]
