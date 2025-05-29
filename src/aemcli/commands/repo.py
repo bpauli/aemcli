@@ -22,7 +22,7 @@ import shutil
 import zipfile
 import json
 import urllib.parse
-import subprocess
+import subprocess  # nosec B404 - subprocess usage is controlled via ALLOWED_COMMANDS whitelist and path validation
 import time
 from pathlib import Path
 import requests

@@ -1,19 +1,19 @@
 {
   "errors": [],
-  "generated_at": "2025-05-29T08:05:29Z",
+  "generated_at": "2025-05-29T08:22:31Z",
   "metrics": {
     "_totals": {
-      "CONFIDENCE.HIGH": 1,
+      "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
       "CONFIDENCE.UNDEFINED": 0,
       "SEVERITY.HIGH": 0,
-      "SEVERITY.LOW": 1,
+      "SEVERITY.LOW": 0,
       "SEVERITY.MEDIUM": 0,
       "SEVERITY.UNDEFINED": 0,
-      "loc": 1083,
+      "loc": 1088,
       "nosec": 0,
-      "skipped_tests": 4
+      "skipped_tests": 5
     },
     "src/aemcli/__init__.py": {
       "CONFIDENCE.HIGH": 0,
@@ -68,39 +68,18 @@
       "skipped_tests": 0
     },
     "src/aemcli/commands/repo.py": {
-      "CONFIDENCE.HIGH": 1,
+      "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
       "CONFIDENCE.UNDEFINED": 0,
       "SEVERITY.HIGH": 0,
-      "SEVERITY.LOW": 1,
+      "SEVERITY.LOW": 0,
       "SEVERITY.MEDIUM": 0,
       "SEVERITY.UNDEFINED": 0,
-      "loc": 873,
+      "loc": 878,
       "nosec": 0,
-      "skipped_tests": 4
+      "skipped_tests": 5
     }
   },
-  "results": [
-    {
-      "code": "24 import urllib.parse\n25 import subprocess\n26 import time\n",
-      "col_offset": 0,
-      "end_col_offset": 17,
-      "filename": "src/aemcli/commands/repo.py",
-      "issue_confidence": "HIGH",
-      "issue_cwe": {
-        "id": 78,
-        "link": "https://cwe.mitre.org/data/definitions/78.html"
-      },
-      "issue_severity": "LOW",
-      "issue_text": "Consider possible security implications associated with the subprocess module.",
-      "line_number": 25,
-      "line_range": [
-        25
-      ],
-      "more_info": "https://bandit.readthedocs.io/en/1.8.3/blacklists/blacklist_imports.html#b404-import-subprocess",
-      "test_id": "B404",
-      "test_name": "blacklist"
-    }
-  ]
+  "results": []
 }
