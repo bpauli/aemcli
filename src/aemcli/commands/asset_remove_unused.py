@@ -1,6 +1,6 @@
 import click
 import os
-import defusedxml.ElementTree as ET
+from lxml import etree
 import shutil
 from pathlib import Path
 
@@ -79,15 +79,22 @@ def check_if_dam_asset_with_common_mime(file_path):
         tuple or None: (asset_path, mime_type) if it's a dam:Asset with common MIME type, None otherwise
     """
     try:
-        # Parse the XML file
-        tree = ET.parse(file_path)
+        # Parse the XML file with lxml
+        parser = etree.XMLParser(strip_cdata=False, recover=True)
+        tree = etree.parse(file_path, parser)
         root = tree.getroot()
+
+        # Define namespaces
+        namespaces = {
+            'jcr': 'http://www.jcp.org/jcr/1.0',
+            'dam': 'http://www.day.com/dam/1.0'
+        }
 
         # Check if jcr:primaryType is dam:Asset
         primary_type = root.get("{http://www.jcp.org/jcr/1.0}primaryType")
         if primary_type == "dam:Asset":
             # Look for the metadata section to find MIME type
-            mime_type = find_mime_type(root)
+            mime_type = find_mime_type(root, namespaces)
             if mime_type and mime_type in COMMON_MIME_TYPES:
                 asset_path = get_asset_path(file_path)
                 return (asset_path, mime_type)
@@ -98,20 +105,21 @@ def check_if_dam_asset_with_common_mime(file_path):
     return None
 
 
-def find_mime_type(root):
+def find_mime_type(root, namespaces):
     """
     Find the dam:MIMEtype property in the asset's metadata section.
 
     Args:
         root: XML root element
+        namespaces: Dictionary of namespace prefixes
 
     Returns:
         str or None: MIME type if found, None otherwise
     """
     # Look for jcr:content/metadata/dam:MIMEtype
-    jcr_content = root.find("{http://www.jcp.org/jcr/1.0}content")
+    jcr_content = root.find(".//jcr:content", namespaces)
     if jcr_content is not None:
-        metadata = jcr_content.find("metadata")
+        metadata = jcr_content.find("metadata", namespaces)
         if metadata is not None:
             mime_type = metadata.get("{http://www.day.com/dam/1.0}MIMEtype")
             return mime_type
@@ -253,12 +261,19 @@ def check_folder_thumbnail_paths(xml_file, asset_path):
         bool: True if asset is found in folderThumbnailPaths, False otherwise
     """
     try:
-        # Parse the XML file
-        tree = ET.parse(xml_file)
+        # Parse the XML file with lxml
+        parser = etree.XMLParser(strip_cdata=False, recover=True)
+        tree = etree.parse(xml_file, parser)
         root = tree.getroot()
 
+        # Define namespaces
+        namespaces = {
+            'jcr': 'http://www.jcp.org/jcr/1.0',
+            'dam': 'http://www.day.com/dam/1.0'
+        }
+
         # Look for jcr:content element
-        jcr_content = root.find("{http://www.jcp.org/jcr/1.0}content")
+        jcr_content = root.find(".//jcr:content", namespaces)
         if jcr_content is not None:
             # Get the dam:folderThumbnailPaths attribute
             thumbnail_paths = jcr_content.get(
@@ -281,7 +296,7 @@ def check_folder_thumbnail_paths(xml_file, asset_path):
 
 def clean_folder_thumbnail_paths(xml_file, asset_path):
     """
-    Remove an asset path from dam:folderThumbnailPaths property in an XML file.
+    Remove an asset path from dam:folderThumbnailPaths property in an XML file using lxml for proper namespace preservation.
 
     Args:
         xml_file (Path): Path to the XML file
@@ -291,50 +306,60 @@ def clean_folder_thumbnail_paths(xml_file, asset_path):
         bool: True if the file was modified, False otherwise
     """
     try:
-        # Parse the XML file
-        tree = ET.parse(xml_file)
+        # Parse with lxml, preserving namespace prefixes
+        parser = etree.XMLParser(strip_cdata=False, recover=True)
+        tree = etree.parse(str(xml_file), parser)
         root = tree.getroot()
-
-        # Look for jcr:content element
-        jcr_content = root.find("{http://www.jcp.org/jcr/1.0}content")
+        
+        # Define namespace map
+        namespaces = {
+            'jcr': 'http://www.jcp.org/jcr/1.0',
+            'dam': 'http://www.day.com/dam/1.0'
+        }
+        
+        # Find jcr:content element
+        jcr_content = root.find(".//jcr:content", namespaces)
         if jcr_content is not None:
             # Get the dam:folderThumbnailPaths attribute
-            thumbnail_paths = jcr_content.get(
-                "{http://www.day.com/dam/1.0}folderThumbnailPaths"
-            )
-            if thumbnail_paths:
+            attr_key = "{http://www.day.com/dam/1.0}folderThumbnailPaths"
+            thumbnail_paths = jcr_content.get(attr_key)
+            
+            if thumbnail_paths and thumbnail_paths.startswith("[") and thumbnail_paths.endswith("]"):
                 # Parse the array format [path1,path2,path3]
-                if thumbnail_paths.startswith("[") and thumbnail_paths.endswith("]"):
-                    paths_str = thumbnail_paths[1:-1]  # Remove brackets
-                    paths = [
-                        path.strip() for path in paths_str.split(",") if path.strip()
-                    ]
-
-                    # Remove the asset path if it exists
-                    if asset_path in paths:
-                        paths.remove(asset_path)
-
-                        # Update the attribute
-                        if paths:
-                            # Reconstruct the array string
-                            new_paths_str = "[" + ",".join(paths) + "]"
-                            jcr_content.set(
-                                "{http://www.day.com/dam/1.0}folderThumbnailPaths",
-                                new_paths_str,
-                            )
-                        else:
-                            # Remove the attribute if no paths remain
-                            del jcr_content.attrib[
-                                "{http://www.day.com/dam/1.0}folderThumbnailPaths"
-                            ]
-
-                        # Write the modified XML back to the file
-                        tree.write(xml_file, encoding="utf-8", xml_declaration=True)
-                        return True
-
+                paths_str = thumbnail_paths[1:-1]  # Remove brackets
+                paths = [path.strip() for path in paths_str.split(",") if path.strip()]
+                
+                # Remove the asset path if it exists
+                if asset_path in paths:
+                    paths.remove(asset_path)
+                    
+                    if paths:
+                        # Reconstruct the array string
+                        new_paths_str = "[" + ",".join(paths) + "]"
+                        jcr_content.set(attr_key, new_paths_str)
+                    else:
+                        # Remove the attribute if no paths remain
+                        if attr_key in jcr_content.attrib:
+                            del jcr_content.attrib[attr_key]
+                    
+                    # Write back preserving namespace prefixes
+                    # First, ensure namespace prefixes are properly registered
+                    for prefix, uri in namespaces.items():
+                        etree.register_namespace(prefix, uri)
+                    
+                    # Write the file
+                    tree.write(
+                        str(xml_file), 
+                        encoding="utf-8", 
+                        xml_declaration=True, 
+                        pretty_print=False,  # Preserve original formatting
+                        method="xml"
+                    )
+                    return True
+                    
     except Exception as e:
         click.echo(f"Error cleaning folderThumbnailPaths in {xml_file}: {e}")
-
+    
     return False
 
 

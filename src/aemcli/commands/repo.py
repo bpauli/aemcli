@@ -27,7 +27,6 @@ import time
 from pathlib import Path
 import requests
 from requests.auth import HTTPBasicAuth
-import defusedxml.ElementTree as ET
 import logging
 
 # Set up logging for better error handling

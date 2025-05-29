@@ -411,7 +411,6 @@ class TestAssetRemoveUnused:
 
     def test_find_mime_type_function(self):
         """Test the find_mime_type function directly."""
-        # Parse a test asset and extract MIME type
         dam_asset_file = (
             self.test_data_dir
             / "jcr_root"
@@ -420,12 +419,19 @@ class TestAssetRemoveUnused:
             / "asset1"
             / ".content.xml"
         )
-        import xml.etree.ElementTree as ET
-
-        tree = ET.parse(dam_asset_file)
+        from lxml import etree
+        
+        parser = etree.XMLParser(strip_cdata=False, recover=True)
+        tree = etree.parse(dam_asset_file, parser)
         root = tree.getroot()
+        
+        # Define namespaces
+        namespaces = {
+            'jcr': 'http://www.jcp.org/jcr/1.0',
+            'dam': 'http://www.day.com/dam/1.0'
+        }
 
-        mime_type = find_mime_type(root)
+        mime_type = find_mime_type(root, namespaces)
         assert mime_type == "image/jpeg"
 
     def test_common_mime_types_constant(self):
@@ -553,9 +559,10 @@ class TestAssetRemoveUnused:
             assert result == True
 
             # Verify the entire attribute was removed
-            import xml.etree.ElementTree as ET
+            from lxml import etree
 
-            tree = ET.parse("test_folder/.content.xml")
+            parser = etree.XMLParser(strip_cdata=False, recover=True)
+            tree = etree.parse("test_folder/.content.xml", parser)
             root = tree.getroot()
             jcr_content = root.find("{http://www.jcp.org/jcr/1.0}content")
             thumbnail_paths = jcr_content.get(
