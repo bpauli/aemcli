@@ -9,6 +9,11 @@ A command-line tool for Adobe Experience Manager (AEM) content management and cl
 
 AEM CLI provides utilities for managing AEM content repositories, with a focus on cleaning and maintaining `.content.xml` files and transferring JCR content between filesystem and server. The tool helps developers and content managers automate common AEM maintenance tasks.
 
+## Commands
+
+- **[content-cleanup](#content-cleanup-command)** - Clean AEM metadata properties from `.content.xml` files
+- **[repo](#repository-content-transfer-command)** - FTP-like tool for JCR content transfer between filesystem and server
+
 ## Features
 
 ### Content Cleanup
