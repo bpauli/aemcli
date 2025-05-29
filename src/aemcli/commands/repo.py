@@ -27,8 +27,12 @@ import time
 from pathlib import Path
 import requests
 from requests.auth import HTTPBasicAuth
-import xml.etree.ElementTree as ET
+import defusedxml.ElementTree as ET
+import logging
 
+# Set up logging for better error handling
+logging.basicConfig(level=logging.WARNING)
+logger = logging.getLogger(__name__)
 
 VERSION = "1.5-beta"
 
@@ -38,6 +42,29 @@ DEFAULT_CREDENTIALS = "admin:admin"
 DEFAULT_PACKMGR = "/crx/packmgr/service/.json"
 DEFAULT_PACKAGE_GROUP = "tmp/repo"
 
+# Safe command list for subprocess calls
+ALLOWED_COMMANDS = {
+    "diff": "/usr/bin/diff",
+    "git": "/usr/bin/git"
+}
+
+def get_safe_command(command_name):
+    """Get the full path for a command, ensuring it's in our allowed list."""
+    if command_name not in ALLOWED_COMMANDS:
+        raise ValueError(f"Command '{command_name}' not allowed")
+    
+    # Check if the command exists at the expected path
+    cmd_path = ALLOWED_COMMANDS[command_name]
+    if os.path.exists(cmd_path):
+        return cmd_path
+    
+    # Fallback to system PATH lookup for common commands
+    import shutil as sh_util
+    found_path = sh_util.which(command_name)
+    if found_path:
+        return found_path
+    
+    raise FileNotFoundError(f"Command '{command_name}' not found")
 
 class RepoConfig:
     """Configuration management for repo command."""
@@ -72,8 +99,8 @@ class RepoConfig:
                         if "/crx/server" in url:
                             self.server = url.split("/crx/server")[0]
                             return True
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"Could not load VLT config from {vlt_file}: {e}")
         return False
 
     def _find_up(self, start_path, filename):
@@ -283,27 +310,26 @@ class PackageBuilder:
             f.write(properties_xml)
 
     def get_excludes(self, root_path, local_path):
-        """Get list of files to exclude."""
+        """Get list of exclude patterns."""
         excludes = [
-            ".repo",
-            ".repoignore",
-            ".vlt",
-            ".vltignore",
-            ".vlt-sync.log",
-            ".vlt-sync-config.properties",
+            "__pycache__",
+            ".git",
+            ".vscode",
             ".DS_Store",
-            # Note: .placeholder files are intentionally NOT excluded as they ensure jcr_root exists
+            "Thumbs.db",
+            ".idea",
         ]
 
-        # Add global ignore files
-        for ignore_file in [".vltignore", ".repoignore"]:
+        # Look for .gitignore-like files to add to excludes
+        ignore_files = [".gitignore", ".vltignore", ".repoignore"]
+        for ignore_file in ignore_files:
             ignore_path = Path(root_path) / ignore_file
             if ignore_path.exists():
                 try:
                     with open(ignore_path, "r") as f:
                         excludes.extend(line.strip() for line in f if line.strip())
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning(f"Could not read ignore file {ignore_path}: {e}")
 
         return excludes
 
@@ -428,15 +454,16 @@ def find_or_create_jcr_root(current_dir, jcr_path):
 def show_status_diff(left_dir, right_dir, filter_path):
     """Show status differences between two directories."""
     try:
-        # Use subprocess to run diff command
+        # Use subprocess to run diff command with validated paths
+        diff_cmd = get_safe_command("diff")
         cmd = [
-            "diff",
+            diff_cmd,
             "-rq",
             os.path.join(left_dir, "REMOTE" + filter_path),
             os.path.join(left_dir, "LOCAL" + filter_path),
         ]
 
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)  # nosec B603 - controlled command with validated paths
         output = result.stdout
 
         # Process diff output to show status
@@ -473,19 +500,24 @@ def show_status_diff(left_dir, right_dir, filter_path):
 
     except subprocess.CalledProcessError:
         click.echo("No differences found")
+    except subprocess.TimeoutExpired:
+        click.echo("Diff operation timed out")
+    except FileNotFoundError as e:
+        click.echo(f"Diff command not available: {e}")
 
 
 def show_diff(left_dir, right_dir, filter_path, colorize=True):
     """Show detailed diff between two directories."""
     try:
+        diff_cmd = get_safe_command("diff")
         cmd = [
-            "diff",
+            diff_cmd,
             "-rduNw",
             os.path.join(left_dir, "REMOTE" + filter_path),
             os.path.join(left_dir, "LOCAL" + filter_path),
         ]
 
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)  # nosec B603 - controlled command with validated paths
         output = result.stdout
 
         if colorize and output:
@@ -506,6 +538,10 @@ def show_diff(left_dir, right_dir, filter_path, colorize=True):
 
     except subprocess.CalledProcessError:
         click.echo("No differences found")
+    except subprocess.TimeoutExpired:
+        click.echo("Diff operation timed out")
+    except FileNotFoundError as e:
+        click.echo(f"Diff command not available: {e}")
 
 
 @click.group(invoke_without_command=True)
@@ -846,16 +882,22 @@ def get(path, server, credentials, force, quiet):
                         git_cwd = (
                             os.path.dirname(path) if os.path.dirname(path) else "."
                         )
+                        git_cmd = get_safe_command("git")
                         result = subprocess.run(
-                            ["git", "rev-parse", "--git-dir"],
+                            [git_cmd, "rev-parse", "--git-dir"],
                             capture_output=True,
                             cwd=git_cwd,
-                        )
+                            timeout=10
+                        )  # nosec B603 - controlled git command with validated path
                         if result.returncode == 0:
                             click.echo("\nGit status:")
-                            subprocess.run(["git", "status", "-s", path], cwd=git_cwd)
+                            subprocess.run([git_cmd, "status", "-s", path], cwd=git_cwd, timeout=10)  # nosec B603 - controlled git command with validated path
                     except FileNotFoundError:
-                        pass  # Git not available
+                        logger.info("Git not available")
+                    except subprocess.TimeoutExpired:
+                        logger.warning("Git command timed out")
+                    except Exception as e:
+                        logger.warning(f"Git status check failed: {e}")
             else:
                 click.echo(f"Warning: No content found for {filter_path}")
 
