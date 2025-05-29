@@ -29,11 +29,17 @@ class TestContentCleanup:
             "cq:lastModified",
             "cq:lastModifiedBy",
             "cq:lastReplicated",
+            "cq:lastReplicated_preview",
             "cq:lastReplicated_publish",
+            "cq:lastReplicated_scene7",
             "cq:lastReplicatedBy",
+            "cq:lastReplicatedBy_preview",
             "cq:lastReplicatedBy_publish",
+            "cq:lastReplicatedBy_scene7",
             "cq:lastReplicationAction",
+            "cq:lastReplicationAction_preview",
             "cq:lastReplicationAction_publish",
+            "cq:lastReplicationAction_scene7",
             "jcr:isCheckedOut",
             "jcr:lastModified",
             "jcr:lastModifiedBy",
@@ -123,11 +129,33 @@ class TestContentCleanup:
             assert "cq:lastModified=" not in content
             assert "jcr:lastModified=" not in content
             assert "cq:isDelivered=" not in content
+            # Check new _preview and _scene7 properties are removed
+            assert "cq:lastReplicated_preview=" not in content
+            assert "cq:lastReplicated_scene7=" not in content
+            assert "cq:lastReplicatedBy_preview=" not in content
+            assert "cq:lastReplicatedBy_scene7=" not in content
+            assert "cq:lastReplicationAction_preview=" not in content
+            assert "cq:lastReplicationAction_scene7=" not in content
 
             # These properties should remain
             assert "jcr:primaryType=" in content
             assert "sling:resourceType=" in content
             assert "jcr:title=" in content
+
+            # Check subpage file as well
+            subpage_xml = Path("test_content/subpage/.content.xml")
+            subpage_content = subpage_xml.read_text()
+            
+            # These should be removed from subpage
+            assert "jcr:uuid=" not in subpage_content
+            assert "cq:lastReplicated_preview=" not in subpage_content
+            assert "cq:lastReplicatedBy_scene7=" not in subpage_content
+            assert "cq:lastReplicationAction_preview=" not in subpage_content
+            
+            # These should remain in subpage
+            assert "cq:customProperty=" in subpage_content
+            assert "sling:resourceType=" in subpage_content
+            assert "jcr:title=" in subpage_content
 
     def test_clean_xml_file_function(self):
         """Test the clean_xml_file function directly."""

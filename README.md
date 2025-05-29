@@ -35,7 +35,7 @@ The tool removes common AEM system properties that are typically not needed in s
 ```bash
 # Clone the repository
 git clone <repository-url>
-cd aem-cli
+cd aemcli
 
 # Create virtual environment
 python -m venv .venv
