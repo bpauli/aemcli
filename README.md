@@ -7,7 +7,7 @@ A command-line tool for Adobe Experience Manager (AEM) content management and cl
 
 ## Overview
 
-AEM CLI provides utilities for managing AEM content repositories, with a focus on cleaning and maintaining `.content.xml` files. The tool helps developers and content managers automate common AEM maintenance tasks.
+AEM CLI provides utilities for managing AEM content repositories, with a focus on cleaning and maintaining `.content.xml` files and transferring JCR content between filesystem and server. The tool helps developers and content managers automate common AEM maintenance tasks.
 
 ## Features
 
@@ -24,6 +24,16 @@ The tool removes common AEM system properties that are typically not needed in s
 - `cq:isDelivered`, `cq:lastModified`, `cq:lastModifiedBy`
 - `cq:lastReplicated*`, `cq:lastReplicatedBy*`, `cq:lastReplicationAction*`
 - `jcr:isCheckedOut`, `jcr:lastModified`, `jcr:lastModifiedBy`, `jcr:uuid`
+
+### Repository Content Transfer (repo)
+- **FTP-like tool for JCR content** with support for diffing
+- **Checkout** - initial checkout of server content to filesystem
+- **Put** - upload local filesystem content to server
+- **Get** - download server content to local filesystem
+- **Status** - list status of modified/added/deleted files
+- **Diff** - show differences between local and server content
+- **Configuration support** - `.repo` files for server/credentials
+- **Package-based transfers** - uses AEM package manager HTTP API
 
 ## Installation
 
@@ -78,6 +88,80 @@ aemcli content-cleanup /path/to/content --default
 - `--default` - Include default AEM properties in removal list
 - `--help` - Show detailed help and examples
 
+### Repository Content Transfer Command
+
+The `repo` command provides FTP-like functionality for transferring JCR content between the filesystem and AEM server.
+
+#### Basic Usage
+```bash
+# Initial checkout from server
+aemcli repo checkout /apps/myproject
+
+# Upload changes to server
+cd jcr_root/apps/myproject
+aemcli repo put
+
+# Download changes from server
+aemcli repo get
+
+# Check status
+aemcli repo status
+# or
+aemcli repo st
+
+# Show differences
+aemcli repo diff
+```
+
+#### Advanced Usage
+```bash
+# Use custom server and credentials
+aemcli repo status -s http://localhost:8080 -u user:password
+
+# Force operations without confirmation
+aemcli repo put -f
+
+# Quiet mode (minimal output)
+aemcli repo get -q
+
+# Show server-side changes
+aemcli repo serverdiff
+
+# Show local changes
+aemcli repo localdiff
+```
+
+#### Configuration Files
+
+**`.repo` file** - Place in checkout or any parent directory:
+```
+server=http://server.com:8080
+credentials=user:password
+```
+
+**`.repoignore` file** - Place in jcr_root directory to exclude files:
+```
+*.tmp
+.cache/
+*.log
+```
+
+#### Available Commands
+- `checkout <jcr-path>` - Initial checkout of server content
+- `put [path]` - Upload local content to server
+- `get [path]` - Download server content to local
+- `status [path]` - Show status of files (alias: `st`)
+- `diff [path]` - Show local differences vs server
+- `localdiff [path]` - Show local changes
+- `serverdiff [path]` - Show server changes
+
+#### Status Legend
+- `M` - Modified
+- `A` - Added locally / deleted remotely
+- `D` - Deleted locally / added remotely
+- `~ fd` - Conflict: local file vs. remote directory
+- `~ df` - Conflict: local directory vs. remote file
+
 ### Examples
 
 #### Example 1: Clean AEM Project
@@ -104,6 +188,28 @@ aemcli content-cleanup /path/to/content --default cq:myCustomProp
 aemcli content-cleanup /path/to/content --dry-run
 ```
 
+#### Example 4: Repository Workflow
+```bash
+# Start from scratch with a server project
+aemcli repo checkout /apps/myproject
+
+# Make local changes
+cd jcr_root/apps/myproject
+vim .content.xml
+
+# Check what changed
+aemcli repo status
+
+# Upload changes
+aemcli repo put
+
+# Later, download server changes
+aemcli repo get
+
+# Show differences
+aemcli repo diff
+```
+
 ## Development
 
 ### Project Structure
@@ -112,9 +218,11 @@ aem-cli/
 ├── src/aemcli/           # Main package
 │   ├── cli.py           # CLI entry point
 │   └── commands/        # Command modules
-│       └── content_cleanup.py
+│       ├── content_cleanup.py
+│       └── repo.py
 ├── tests/               # Test suite
 │   ├── test_content_cleanup.py
+│   ├── test_repo.py
 │   └── test_content/    # Test data
 ├── requirements.txt     # Dependencies
 ├── pyproject.toml      # Project configuration
@@ -203,6 +311,7 @@ This project uses GitHub Actions for continuous integration and deployment. Two 
 
 ### Core Dependencies
 - **click>=8.0** - Command-line interface framework
+- **requests>=2.28** - HTTP library for AEM API calls
 
 ### Development Dependencies
 - **pytest>=7.0** - Testing framework
@@ -245,6 +354,13 @@ For questions, issues, or contributions, please:
 4. Provide example files when relevant
 
 ## Changelog
+
+### v0.2.0
+- Added `repo` command for JCR content transfer
+- FTP-like functionality for AEM content management
+- Support for checkout, put, get, status, and diff operations
+- Configuration file support (.repo, .repoignore)
+- Package-based transfers using AEM package manager API
 
 ### v0.1.0
 - Initial release

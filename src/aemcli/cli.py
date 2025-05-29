@@ -1,5 +1,6 @@
 import click
 from .commands.content_cleanup import content_cleanup
+from .commands.repo import repo
 
 
 @click.group()
@@ -10,6 +11,7 @@ def main():
 
 # register subcommands
 main.add_command(content_cleanup)
+main.add_command(repo)
 
 if __name__ == "__main__":
     main()
