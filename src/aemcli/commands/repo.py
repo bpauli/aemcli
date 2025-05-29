@@ -43,28 +43,28 @@ DEFAULT_PACKMGR = "/crx/packmgr/service/.json"
 DEFAULT_PACKAGE_GROUP = "tmp/repo"
 
 # Safe command list for subprocess calls
-ALLOWED_COMMANDS = {
-    "diff": "/usr/bin/diff",
-    "git": "/usr/bin/git"
-}
+ALLOWED_COMMANDS = {"diff": "/usr/bin/diff", "git": "/usr/bin/git"}
+
 
 def get_safe_command(command_name):
     """Get the full path for a command, ensuring it's in our allowed list."""
     if command_name not in ALLOWED_COMMANDS:
         raise ValueError(f"Command '{command_name}' not allowed")
-    
+
     # Check if the command exists at the expected path
     cmd_path = ALLOWED_COMMANDS[command_name]
     if os.path.exists(cmd_path):
         return cmd_path
-    
+
     # Fallback to system PATH lookup for common commands
     import shutil as sh_util
+
     found_path = sh_util.which(command_name)
     if found_path:
         return found_path
-    
+
     raise FileNotFoundError(f"Command '{command_name}' not found")
+
 
 class RepoConfig:
     """Configuration management for repo command."""
@@ -318,6 +318,8 @@ class PackageBuilder:
             ".DS_Store",
             "Thumbs.db",
             ".idea",
+            ".repo",
+            ".vlt",
         ]
 
         # Look for .gitignore-like files to add to excludes
@@ -463,7 +465,9 @@ def show_status_diff(left_dir, right_dir, filter_path):
             os.path.join(left_dir, "LOCAL" + filter_path),
         ]
 
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)  # nosec B603 - controlled command with validated paths
+        result = subprocess.run(
+            cmd, capture_output=True, text=True, timeout=30
+        )  # nosec B603 - controlled command with validated paths
         output = result.stdout
 
         # Process diff output to show status
@@ -517,7 +521,9 @@ def show_diff(left_dir, right_dir, filter_path, colorize=True):
             os.path.join(left_dir, "LOCAL" + filter_path),
         ]
 
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)  # nosec B603 - controlled command with validated paths
+        result = subprocess.run(
+            cmd, capture_output=True, text=True, timeout=30
+        )  # nosec B603 - controlled command with validated paths
         output = result.stdout
 
         if colorize and output:
@@ -887,11 +893,13 @@ def get(path, server, credentials, force, quiet):
                             [git_cmd, "rev-parse", "--git-dir"],
                             capture_output=True,
                             cwd=git_cwd,
-                            timeout=10
+                            timeout=10,
                         )  # nosec B603 - controlled git command with validated path
                         if result.returncode == 0:
                             click.echo("\nGit status:")
-                            subprocess.run([git_cmd, "status", "-s", path], cwd=git_cwd, timeout=10)  # nosec B603 - controlled git command with validated path
+                            subprocess.run(
+                                [git_cmd, "status", "-s", path], cwd=git_cwd, timeout=10
+                            )  # nosec B603 - controlled git command with validated path
                     except FileNotFoundError:
                         logger.info("Git not available")
                     except subprocess.TimeoutExpired:
