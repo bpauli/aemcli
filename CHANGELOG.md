@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2025-06-02
+
+### Added
+- **New `content-cleanup node` subcommand** for removing nodes and folders from AEM content
+- Node name mangling support with automatic JCR to filesystem name conversion:
+  - `jcr:content` ↔ `_jcr_content`
+  - `rep:policy` ↔ `_rep_policy`
+  - Support for any node names with colons
+- Comprehensive node removal functionality:
+  - Removes nodes from all `.content.xml` files (both self-closing and with content)
+  - Removes corresponding folders with matching names
+  - Preserves other nodes and XML structure integrity
+- Current directory as default path for node subcommand (improved usability)
+- Enhanced test coverage with 18 additional comprehensive unit tests for node functionality
+- Edge case handling for node names with special characters, empty strings, and permission errors
+
+### Changed
+- **BREAKING**: Restructured `content-cleanup` command to use subcommands:
+  - `content-cleanup property` - Original property removal functionality
+  - `content-cleanup node` - New node removal functionality
+- Improved CLI interface with better command organization and help text
+- Enhanced error handling and user feedback for both subcommands
+
+### Enhanced
+- Updated documentation with comprehensive examples for both property and node cleanup
+- Improved test suite now includes 30 tests for content-cleanup functionality
+- Better command-line help with subcommand-specific examples and usage patterns
+
 ## [0.3.0] - 2024-05-29
 
 ### Added

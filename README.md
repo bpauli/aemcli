@@ -11,7 +11,7 @@ AEM CLI provides utilities for managing AEM content repositories, with a focus o
 
 ## Commands
 
-- **[content-cleanup](#content-cleanup-command)** - Clean AEM metadata properties from `.content.xml` files
+- **[content-cleanup](#content-cleanup-command)** - Clean AEM metadata properties and remove nodes from `.content.xml` files
 - **[asset-remove-unused](#asset-remove-unused-command)** - Find and remove unused DAM assets with reference checking
 - **[repo](#repository-content-transfer-command)** - FTP-like tool for JCR content transfer between filesystem and server
 
@@ -19,17 +19,25 @@ AEM CLI provides utilities for managing AEM content repositories, with a focus o
 
 ### Content Cleanup
 - **Remove AEM metadata properties** from `.content.xml` files
+- **Remove nodes and folders** with automatic name mangling support
 - **Flexible property selection** - use default AEM properties or specify custom ones
 - **Recursive processing** - handles entire directory trees
 - **Dry-run mode** - preview changes before applying them
-- **Detailed reporting** - see exactly what properties are removed
+- **Detailed reporting** - see exactly what properties and nodes are removed
 
-#### Default Properties Removed
+#### Property Cleanup
 The tool removes common AEM system properties that are typically not needed in source control:
 
 - `cq:isDelivered`, `cq:lastModified`, `cq:lastModifiedBy`
 - `cq:lastReplicated*`, `cq:lastReplicatedBy*`, `cq:lastReplicationAction*`
 - `jcr:isCheckedOut`, `jcr:lastModified`, `jcr:lastModifiedBy`, `jcr:uuid`
+
+#### Node Cleanup
+- **Remove specific nodes** from all `.content.xml` files
+- **Delete corresponding folders** with matching names
+- **Automatic name mangling** - handles JCR to filesystem name conversion (e.g., `jcr:content` ↔ `_jcr_content`)
+- **Safe removal** - preserves other nodes and content structure
+- **Current directory default** - works from any directory without specifying paths
 
 ### Asset Cleanup
 - **Find unused DAM assets** with common MIME types (images, videos, documents, audio)
@@ -84,30 +92,75 @@ pip install -e .
 
 ### Content Cleanup Command
 
-#### Basic Usage
+The `content-cleanup` command has two subcommands for different types of cleanup operations:
+
+#### Property Cleanup (content-cleanup property)
+
+##### Basic Usage
 ```bash
 # Clean using default AEM properties
-aemcli content-cleanup /path/to/content
+aemcli content-cleanup property /path/to/content
 
 # Preview changes without modifying files
-aemcli content-cleanup /path/to/content --dry-run
+aemcli content-cleanup property /path/to/content --dry-run
 ```
 
-#### Advanced Usage
+##### Advanced Usage
 ```bash
 # Use only custom properties
-aemcli content-cleanup /path/to/content cq:customProp jcr:myProp
+aemcli content-cleanup property /path/to/content cq:customProp jcr:myProp
 
 # Combine default and custom properties
-aemcli content-cleanup /path/to/content --default cq:customProp
+aemcli content-cleanup property /path/to/content --default cq:customProp
 
 # Explicitly use default properties
-aemcli content-cleanup /path/to/content --default
+aemcli content-cleanup property /path/to/content --default
 ```
 
-#### Options
+##### Options
 - `--dry-run` - Show what would be changed without modifying files
 - `--default` - Include default AEM properties in removal list
+- `--help` - Show detailed help and examples
+
+#### Node Cleanup (content-cleanup node)
+
+##### Basic Usage
+```bash
+# Remove jcr:content nodes and folders from current directory
+aemcli content-cleanup node jcr:content
+
+# Preview changes without modifying files
+aemcli content-cleanup node jcr:content --dry-run
+
+# Remove nodes from specific path
+aemcli content-cleanup node cq:dialog /path/to/content
+```
+
+##### Advanced Usage
+```bash
+# Remove different types of nodes
+aemcli content-cleanup node rep:policy
+aemcli content-cleanup node cq:EditConfig
+aemcli content-cleanup node cq:childEditConfig
+
+# Remove nodes with special characters
+aemcli content-cleanup node "node-with-dashes"
+aemcli content-cleanup node "node.with.dots"
+```
+
+##### How Node Cleanup Works
+1. **Name Mangling**: Automatically handles JCR to filesystem name conversion
+   - `jcr:content` → `_jcr_content`
+   - `rep:policy` → `_rep_policy`
+   - Regular names remain unchanged
+2. **XML Processing**: Removes matching nodes from all `.content.xml` files
+   - Handles both self-closing tags (`<nodeName />`) and tags with content
+   - Preserves other nodes and XML structure
+3. **Folder Removal**: Finds and removes folders with matching names (both original and mangled)
+4. **Safety Features**: Dry-run mode and detailed reporting
+
+##### Options
+- `--dry-run` - Show what would be changed without modifying files
 - `--help` - Show detailed help and examples
 
 ### Asset Remove Unused Command
@@ -157,41 +210,6 @@ aemcli asset-remove-unused content/dam/myproject --dry-run
 aemcli asset-remove-unused content/dam/myproject
 
 # Check entire DAM folder
-aemcli asset-remove-unused content/dam
-```
-
-#### Example 4: Repository Workflow
-```bash
-# Start from scratch with a server project
-aemcli repo checkout /apps/myproject
-
-# Make local changes
-cd jcr_root/apps/myproject
-vim .content.xml
-
-# Check what changed
-aemcli repo status
-
-# Upload changes
-aemcli repo put
-
-# Later, download server changes
-aemcli repo get
-
-# Show differences
-aemcli repo diff
-```
-
-#### Example 5: Asset Cleanup Workflow
-```bash
-# Preview unused assets before deletion
-aemcli asset-remove-unused content/dam/myproject --dry-run
-
-# Review the output, then proceed with cleanup
-aemcli asset-remove-unused content/dam/myproject
-
-# Clean up entire DAM folder
-aemcli asset-remove-unused content/dam --dry-run
 aemcli asset-remove-unused content/dam
 ```
 
@@ -271,31 +289,35 @@ credentials=user:password
 
 ### Examples
 
-#### Example 1: Clean AEM Project
+#### Example 1: Property Cleanup
 ```bash
 # Clean all .content.xml files in an AEM project
-aemcli content-cleanup content/sites-franklin-commerce --dry-run
+aemcli content-cleanup property content/sites-franklin-commerce --dry-run
 
 # Apply the changes
-aemcli content-cleanup content/sites-franklin-commerce
-```
+aemcli content-cleanup property content/sites-franklin-commerce
 
-#### Example 2: Custom Properties
-```bash
 # Remove only specific custom properties
-aemcli content-cleanup /path/to/content cq:myCustomProp jcr:tempData
+aemcli content-cleanup property /path/to/content cq:myCustomProp jcr:tempData
 
 # Remove default properties plus custom ones
-aemcli content-cleanup /path/to/content --default cq:myCustomProp
+aemcli content-cleanup property /path/to/content --default cq:myCustomProp
 ```
 
-#### Example 3: Preview Mode
+#### Example 2: Node Cleanup
 ```bash
-# See what would be changed without modifying files
-aemcli content-cleanup /path/to/content --dry-run
+# Remove jcr:content nodes and folders from current directory
+cd /path/to/aem/content
+aemcli content-cleanup node jcr:content
+
+# Preview what would be removed
+aemcli content-cleanup node cq:dialog --dry-run
+
+# Remove nodes from specific path
+aemcli content-cleanup node rep:policy /path/to/content
 ```
 
-#### Example 4: Repository Workflow
+#### Example 3: Repository Workflow
 ```bash
 # Start from scratch with a server project
 aemcli repo checkout /apps/myproject
@@ -317,7 +339,7 @@ aemcli repo get
 aemcli repo diff
 ```
 
-#### Example 5: Asset Cleanup Workflow
+#### Example 4: Asset Cleanup Workflow
 ```bash
 # Preview unused assets before deletion
 aemcli asset-remove-unused content/dam/myproject --dry-run
